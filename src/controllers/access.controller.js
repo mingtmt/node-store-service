@@ -1,11 +1,15 @@
-'use strict'
+"use strict";
 
 const AccessService = require("../services/access.service");
+const { CREATED } = require("../core/success.response");
 
 class AccessController {
     register = async (req, res, next) => {
-        return res.status(201).json(await AccessService.register(req.body));
-    }
+        new CREATED({
+            message: "Register user success",
+            metadata: await AccessService.register(req.body),
+        }).send(res);
+    };
 }
 
-module.exports = new AccessController
+module.exports = new AccessController();
