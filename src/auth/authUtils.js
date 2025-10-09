@@ -1,31 +1,71 @@
-'use strict'
+"use strict";
 
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
+const { asyncHandler } = require("../helpers/asyncHandler");
+const { AuthFailureError, NotFoundError } = require("../core/error.response");
+const { findByUserId } = require("../services/keyToken.service");
+
+const HEADERS = {
+    API_KEY: "x-api-key",
+    CLIENT_ID: "x-client-id",
+    AUTHORIZATION: "authorization",
+};
 
 const createTokenPair = async (payload, publicKey, privateKey) => {
     try {
         const accessToken = await jwt.sign(payload, publicKey, {
-            expiresIn: '30 minutes',
+            expiresIn: "30 minutes",
         });
 
         const refreshToken = await jwt.sign(payload, privateKey, {
-            expiresIn: '7 days'
+            expiresIn: "7 days",
         });
 
         jwt.verify(accessToken, publicKey, (err, decode) => {
             if (err) {
-                console.log('access token invalid: ', err);
+                console.log("access token invalid: ", err);
             } else {
-                console.log('decode access token: ', decode);
+                console.log("decode access token: ", decode);
             }
         });
 
-        return { accessToken, refreshToken }
-    } catch (err) {
+        return { accessToken, refreshToken };
+    } catch (err) {}
+};
 
+const authentication = asyncHandler(async (req, res, next) => {
+    // 1 - check userId is missing
+    const userId = req.headers[HEADERS.CLIENT_ID];
+    if (!userId) {
+        throw new AuthFailureError("Error: Authentication error");
     }
-}
+
+    // 2 - get access token
+    const keyStore = await findByUserId(userId);
+    if (!keyStore) {
+        throw new NotFoundError("Error: key store not found");
+    }
+
+    // 3 - verify access token
+    const accessToken = req.headers[HEADERS.AUTHORIZATION];
+    if (!accessToken) {
+        throw new AuthFailureError("Error: Invalid token");
+    }
+
+    try {
+        const decoded = jwt.verify(accessToken, keyStore.publicKey);
+        if (userId !== decoded.userId) {
+            throw new AuthFailureError("Error: Invalid token");
+        }
+        
+        req.keyStore = keyStore;
+        return next();
+    } catch (err) {
+        throw err;
+    }
+});
 
 module.exports = {
     createTokenPair,
-}
+    authentication,
+};

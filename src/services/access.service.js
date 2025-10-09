@@ -16,13 +16,10 @@ const userRoles = {
 };
 
 class AccessService {
-    /*
-        1 - check email in db
-        2 - check password
-        3 - create publicKet and privateKey store in db
-        4 - generate tokens
-        5 - get data return client
-    */
+    static logout = async (keyStore) => {
+        return await KeyTokenService.removeKeyById(keyStore._id);
+    }
+
     static login = async ({ email, password, refreshToken = null }) => {
         // 1 - check email in db
         const foundUser = await findByEmail({ email });
