@@ -7,5 +7,7 @@ const router = express.Router();
 
 // Register user
 router.post("/users/register", asyncHandler(accessController.register));
+// Login user
+router.post("/users/login", asyncHandler(accessController.login));
 
 module.exports = router;
