@@ -4,9 +4,9 @@ const userModel = require("../models/user.model");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const KeyTokenService = require("./keyToken.service");
-const { createTokenPair } = require("../auth/authUtils");
+const { createTokenPair, verifyJWT } = require("../auth/authUtils");
 const { getInfoData } = require("../utils");
-const { BadRequestError, AuthFailureError } = require("../core/error.response");
+const { BadRequestError, AuthFailureError, ForbiddenError } = require("../core/error.response");
 const { findByEmail } = require("./user.service");
 
 const userRoles = {
@@ -16,6 +16,49 @@ const userRoles = {
 };
 
 class AccessService {
+    static handleRefreshToken = async (refreshToken) => {
+        // 1 - check refresh token in db
+        const foundToken = await KeyTokenService.findByRefreshTokenUsed(refreshToken);
+        if (foundToken) {
+            // 2 - decode refresh token to get userId
+            const { userId, email } = await verifyJWT(refreshToken, foundToken.privateKey);
+            console.log("userId: ", userId);
+            console.log("email: ", email);
+
+            await KeyTokenService.removeKeyByUserId(userId);
+            throw new ForbiddenError("Error: Something went wrong");
+        }
+
+        const holderToken = await KeyTokenService.findByRefreshToken(refreshToken);
+        if (!holderToken) {
+            throw new AuthFailureError("Error: Refresh token not found");
+        }
+        const { userId, email } = await verifyJWT(refreshToken, holderToken.privateKey);
+        console.log("userId: ", userId);
+        console.log("email: ", email);
+
+        const foundUser = await findByEmail({ email });
+        if (!foundUser) {
+            throw new AuthFailureError("Error: User not found");
+        }
+
+        const tokens = await createTokenPair({userId, email}, holderToken.publicKey, holderToken.privateKey);
+
+        await holderToken.updateOne({
+            $set: {
+                refreshToken: tokens.refreshToken,
+            },
+            $addToSet: {
+                refreshTokensUsed: refreshToken,
+            }
+        })
+
+        return {
+            user: { userId, email },
+            tokens,
+        }
+    }
+
     static logout = async (keyStore) => {
         return await KeyTokenService.removeKeyById(keyStore._id);
     }
