@@ -39,19 +39,22 @@ class Product {
         this.attributes = attributes;
     }
 
-    async createProduct() {
-        return await product.create(this);
+    async createProduct(id) {
+        return await product.create({ ...this, _id: id });
     }
 }
 
 class Clothes extends Product {
     async createProduct() {
-        const newClothes = await clothes.create(this.attributes);
+        const newClothes = await clothes.create({
+            ...this.attributes,
+            shop: this.shop,
+        });
         if (!newClothes) {
             throw new BadRequestError("Error: Clothes not created");
         }
 
-        const newProduct = await super.createProduct();
+        const newProduct = await super.createProduct(newClothes._id);
         if (!newProduct) {
             throw new BadRequestError("Error: Product not created");
         }
@@ -62,12 +65,15 @@ class Clothes extends Product {
 
 class Electronic extends Product {
     async createProduct() {
-        const newElectronic = await electronic.create(this.attributes);
+        const newElectronic = await electronic.create({
+            ...this.attributes,
+            shop: this.shop,
+        });
         if (!newElectronic) {
             throw new BadRequestError("Error: Electronic not created");
         }
 
-        const newProduct = await super.createProduct();
+        const newProduct = await super.createProduct(newElectronic._id);
         if (!newProduct) {
             throw new BadRequestError("Error: Product not created");
         }

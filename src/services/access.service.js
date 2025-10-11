@@ -17,35 +17,26 @@ const userRoles = {
 };
 
 class AccessService {
-    static handleRefreshToken = async (refreshToken) => {
-        // 1 - check refresh token in db
-        const foundToken = await KeyTokenService.findByRefreshTokenUsed(refreshToken);
-        if (foundToken) {
-            // 2 - decode refresh token to get userId
-            const { userId, email } = await verifyJWT(refreshToken, foundToken.privateKey);
-            console.log("userId: ", userId);
-            console.log("email: ", email);
+    static handleRefreshToken = async ({refreshToken, user, keyStore}) => {
+        const { userId, email } = user;
 
+        if (keyStore.refreshTokensUsed.includes(refreshToken)) {
             await KeyTokenService.removeKeyByUserId(userId);
             throw new ForbiddenError("Error: Something went wrong");
         }
 
-        const holderToken = await KeyTokenService.findByRefreshToken(refreshToken);
-        if (!holderToken) {
+        if (keyStore.refreshToken !== refreshToken) {
             throw new AuthFailureError("Error: Refresh token not found");
         }
-        const { userId, email } = await verifyJWT(refreshToken, holderToken.privateKey);
-        console.log("userId: ", userId);
-        console.log("email: ", email);
 
         const foundUser = await UserSevice.findByEmail({ email });
         if (!foundUser) {
             throw new AuthFailureError("Error: User not found");
         }
 
-        const tokens = await createTokenPair({userId, email}, holderToken.publicKey, holderToken.privateKey);
+        const tokens = await createTokenPair({userId, email}, keyStore.publicKey, keyStore.privateKey);
 
-        await holderToken.updateOne({
+        await keyStore.updateOne({
             $set: {
                 refreshToken: tokens.refreshToken,
             },
@@ -55,7 +46,7 @@ class AccessService {
         })
 
         return {
-            user: { userId, email },
+            user,
             tokens,
         }
     }

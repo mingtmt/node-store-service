@@ -9,6 +9,7 @@ const HEADERS = {
     API_KEY: "x-api-key",
     CLIENT_ID: "x-client-id",
     AUTHORIZATION: "authorization",
+    REFRESH_TOKEN: "x-refresh-token",
 };
 
 const createTokenPair = async (payload, publicKey, privateKey) => {
@@ -47,21 +48,20 @@ const authentication = asyncHandler(async (req, res, next) => {
     }
 
     // 3 - verify access token
-    const accessToken = req.headers[HEADERS.AUTHORIZATION];
-    if (!accessToken) {
-        throw new AuthFailureError("Error: Invalid token");
-    }
-
-    try {
-        const decoded = jwt.verify(accessToken, keyStore.publicKey);
-        if (userId !== decoded.userId) {
-            throw new AuthFailureError("Error: Invalid token");
+    if (req.headers[HEADERS.REFRESH_TOKEN]) {
+        try {
+            const refreshToken = req.headers[HEADERS.REFRESH_TOKEN];
+            const decoded = jwt.verify(refreshToken, keyStore.privateKey);
+            if (userId !== decoded.userId) {
+                throw new AuthFailureError("Error: Invalid token");
+            }
+            req.keyStore = keyStore;
+            req.user = decoded;
+            req.refreshToken = refreshToken;
+            return next();
+        } catch (err) {
+            throw err;
         }
-        
-        req.keyStore = keyStore;
-        return next();
-    } catch (err) {
-        throw err;
     }
 });
 
