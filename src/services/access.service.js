@@ -4,6 +4,7 @@ const userModel = require("../models/user.model");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const KeyTokenService = require("./keyToken.service");
+const UserSevice = require("./user.service");
 const { createTokenPair, verifyJWT } = require("../auth/authUtils");
 const { getInfoData } = require("../utils");
 const { BadRequestError, AuthFailureError, ForbiddenError } = require("../core/error.response");
@@ -37,7 +38,7 @@ class AccessService {
         console.log("userId: ", userId);
         console.log("email: ", email);
 
-        const foundUser = await findByEmail({ email });
+        const foundUser = await UserSevice.findByEmail({ email });
         if (!foundUser) {
             throw new AuthFailureError("Error: User not found");
         }
