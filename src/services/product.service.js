@@ -1,20 +1,22 @@
 "use strict";
 
 const { BadRequestError } = require("../core/error.response");
-const { product, electronic, clothes } = require("../models/product.model");
+const { product, electronic, clothes, furniture } = require("../models/product.model");
 
 class ProductFactory {
+    static productRegistry = {};
+
+    static registerProductType (type, classRef) {
+        ProductFactory.productRegistry[type] = classRef;
+    }
+
     static createProduct = async (type, payload) => {
-        switch (type) {
-            case "Electronic":
-                return new Electronic(payload).createProduct();
-            case "Clothes":
-                return new Clothes(payload).createProduct();
-            default:
-                throw new BadRequestError(
-                    `Error: Product type ${type} not found`
-                );
+        const productClass = ProductFactory.productRegistry[type];
+        if (!productClass) {
+            throw new BadRequestError("Error: Product type not found");
         }
+
+        return new productClass(payload).createProduct();
     };
 }
 
@@ -81,5 +83,28 @@ class Electronic extends Product {
         return newProduct;
     }
 }
+
+class Furniture extends Product {
+    async createProduct() {
+        const newFurniture = await furniture.create({
+            ...this.attributes,
+            shop: this.shop,
+        });
+        if (!newFurniture) {
+            throw new BadRequestError("Error: Furniture not created");
+        }
+
+        const newProduct = await super.createProduct(newFurniture._id);
+        if (!newProduct) {
+            throw new BadRequestError("Error: Furniture not created");
+        }
+
+        return newProduct;
+    }
+}
+
+ProductFactory.registerProductType("Electronic", Electronic);
+ProductFactory.registerProductType("Clothes", Clothes);
+ProductFactory.registerProductType("Furniture", Furniture);
 
 module.exports = ProductFactory;
