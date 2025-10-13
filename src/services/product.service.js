@@ -2,6 +2,7 @@
 
 const { BadRequestError } = require("../core/error.response");
 const { product, electronic, clothes, furniture } = require("../models/product.model");
+const { findAllDraftsForShop } = require("../repositories/product.repo");
 
 class ProductFactory {
     static productRegistry = {};
@@ -18,6 +19,11 @@ class ProductFactory {
 
         return new productClass(payload).createProduct();
     };
+
+    static findAllDraftsForShop = async ({shop, limit = 50, skip = 0}) => {
+        const query = { shop, isDraft: true };
+        return await findAllDraftsForShop({query, limit, skip});
+    }
 }
 
 class Product {

@@ -1,6 +1,6 @@
 "use strict";
 
-const { CREATED } = require("../core/success.response");
+const { CREATED, SuccessResponse } = require("../core/success.response");
 const ProductService = require("../services/product.service");
 
 class ProductController {
@@ -13,6 +13,15 @@ class ProductController {
             }),
         }).send(res);
     };
+    
+    getAllDraftsForShop = async (req, res, next) => {
+        new SuccessResponse({
+            message: "Get all drafts for shop success",
+            metadata: await ProductService.findAllDraftsForShop({
+                shop: req.user.userId,
+            }),
+        }).send(res);
+    }
 }
 
 module.exports = new ProductController();

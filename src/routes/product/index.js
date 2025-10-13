@@ -8,7 +8,9 @@ const router = express.Router();
 
 // Authentication
 router.use(authentication);
-// Logout user
+// Create product
 router.post("/create", asyncHandler(productController.createProduct));
+// Get all drafts for shop
+router.get("/drafts/all", asyncHandler(productController.getAllDraftsForShop));
 
 module.exports = router;
